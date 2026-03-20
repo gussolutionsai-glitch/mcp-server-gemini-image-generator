@@ -2,8 +2,7 @@
 """
 Generate an animated 3D futuristic robot working from home like a human.
 
-This script uses the Gemini API (same as the MCP server) to generate
-a stylized 3D render of a futuristic robot in a cozy home-office setting.
+Uses the GemImg library with Gemini's image generation model.
 
 Usage:
     export GEMINI_API_KEY="your-api-key"
@@ -12,17 +11,10 @@ Usage:
 The generated image will be saved to ~/gen_image/ (or OUTPUT_IMAGE_PATH).
 """
 
-import asyncio
-import io
 import os
 import sys
 
-# Add the project source to the path so we can reuse the server modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-import PIL.Image
-from google import genai
-from google.genai import types
+from gemimg import GemImg
 
 # ---------------------------------------------------------------------------
 # Detailed prompt crafted for a high-quality 3D animated robot scene
@@ -75,7 +67,7 @@ OUTPUT_DIR = os.getenv("OUTPUT_IMAGE_PATH") or os.path.expanduser("~/gen_image")
 FILENAME = "futuristic_robot_working_from_home"
 
 
-async def generate():
+def main():
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("ERROR: Set the GEMINI_API_KEY environment variable first.")
@@ -83,43 +75,23 @@ async def generate():
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    client = genai.Client(api_key=api_key)
-    model = "gemini-3-pro-image-preview"
-
+    model = "gemini-2.0-flash-exp"
     print(f"Generating image with model {model} ...")
-    response = client.models.generate_content(
-        model=model,
-        contents=[ROBOT_WFH_PROMPT],
-        config=types.GenerateContentConfig(
-            response_modalities=["Text", "Image"],
-        ),
-    )
 
-    # Extract the image bytes from the response
-    image_data = None
-    for part in response.candidates[0].content.parts:
-        if part.inline_data is not None:
-            image_data = part.inline_data.data
-            break
+    g = GemImg(api_key=api_key, model=model)
+    result = g.generate(ROBOT_WFH_PROMPT, save=True, save_dir=OUTPUT_DIR)
 
-    if image_data is None:
-        print("ERROR: No image data returned by Gemini.")
+    if result and result.images:
+        # Move/rename the saved file to our preferred filename
+        saved = result.images[0]
+        out_path = os.path.join(OUTPUT_DIR, f"{FILENAME}.png")
+        saved.save(out_path)
+        print(f"Image saved to {out_path}")
+        return out_path
+    else:
+        print("ERROR: No image data returned.")
         sys.exit(1)
-
-    # Save
-    image = PIL.Image.open(io.BytesIO(image_data))
-    out_path = os.path.join(OUTPUT_DIR, f"{FILENAME}.png")
-    image.save(out_path)
-    print(f"Image saved to {out_path}")
-
-    # Try to display
-    try:
-        image.show()
-    except Exception:
-        pass  # headless environments may not support display
-
-    return out_path
 
 
 if __name__ == "__main__":
-    asyncio.run(generate())
+    main()
