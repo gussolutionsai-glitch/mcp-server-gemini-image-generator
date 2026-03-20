@@ -131,6 +131,17 @@ Using the flying pig image created above, we applied a transformation with the f
 
 *The original flying pig image with a cute baby whale added flying alongside it*
 
+### Example: Animated 3D Robot Working From Home
+
+You can also run the standalone example script to generate a Pixar-quality 3D animated robot working from home:
+
+```bash
+export GEMINI_API_KEY="your-api-key"
+uv run python examples/generate_robot_wfh.py
+```
+
+This generates a detailed scene of a friendly futuristic robot sitting at a cozy home-office desk — complete with a holographic keyboard, steaming coffee mug, a robot-cat companion, and a stunning futuristic cityscape visible through the window. The prompt is carefully crafted for cinematic 3D animation quality with warm lighting, depth of field, and Pixar-style rendering.
+
 ## Setup
 
 ### Prerequisites
