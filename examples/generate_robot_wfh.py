@@ -2,7 +2,7 @@
 """
 Generate an animated 3D futuristic robot working from home like a human.
 
-Uses the GemImg library with Gemini's image generation model.
+Uses Google's Gemini API with the gemini-3.1-flash-image-preview model.
 
 Usage:
     export GEMINI_API_KEY="your-api-key"
@@ -13,8 +13,10 @@ The generated image will be saved to ~/gen_image/ (or OUTPUT_IMAGE_PATH).
 
 import os
 import sys
+from io import BytesIO
 
-from gemimg import GemImg
+import PIL.Image
+from google import genai
 
 # ---------------------------------------------------------------------------
 # Detailed prompt crafted for a high-quality 3D animated robot scene
@@ -75,22 +77,29 @@ def main():
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    model = "gemini-2.0-flash-exp"
+    client = genai.Client(api_key=api_key)
+    model = "gemini-3.1-flash-image-preview"
+
     print(f"Generating image with model {model} ...")
 
-    g = GemImg(api_key=api_key, model=model)
-    result = g.generate(ROBOT_WFH_PROMPT, save=True, save_dir=OUTPUT_DIR)
+    response = client.models.generate_content(
+        model=model,
+        contents=[ROBOT_WFH_PROMPT],
+    )
 
-    if result and result.images:
-        # Move/rename the saved file to our preferred filename
-        saved = result.images[0]
-        out_path = os.path.join(OUTPUT_DIR, f"{FILENAME}.png")
-        saved.save(out_path)
-        print(f"Image saved to {out_path}")
-        return out_path
-    else:
-        print("ERROR: No image data returned.")
-        sys.exit(1)
+    # Extract and save the image
+    out_path = os.path.join(OUTPUT_DIR, f"{FILENAME}.png")
+    for part in response.candidates[0].content.parts:
+        if part.text is not None:
+            print(part.text)
+        elif part.inline_data is not None:
+            image = PIL.Image.open(BytesIO(part.inline_data.data))
+            image.save(out_path)
+            print(f"Image saved to {out_path}")
+            return out_path
+
+    print("ERROR: No image data returned by Gemini.")
+    sys.exit(1)
 
 
 if __name__ == "__main__":
